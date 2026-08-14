@@ -37,10 +37,10 @@ html, body {
 button { font-family: inherit; }
 .hidden { display: none !important; }
 
-#app { min-height: 100vh; }
+#app { min-height: 100vh; min-height: 100dvh; }
 
 /* ---------- 화면 전환 ---------- */
-.screen { display: none; padding: 16px; min-height: 100vh; }
+.screen { display: none; padding: 16px; min-height: 100vh; min-height: 100dvh; }
 .screen.active { display: block; }
 .screen.game.active { display: block; padding: 10px; }
 
@@ -201,7 +201,7 @@ button { cursor: pointer; border: none; }
   text-align: center; font-size: 32px; font-weight: 900; letter-spacing: 6px;
   color: #5a3a1c; background: #fff; border-radius: 12px; padding: 12px; margin: 10px 0;
 }
-.wait-actions { display: flex; gap: 8px; justify-content: center; }
+.wait-actions { display: flex; gap: 8px; justify-content: center; margin-top: 10px; }
 .waiting { text-align: center; color: var(--muted); font-size: 13px; margin: 10px 0; }
 .dots i { font-style: normal; animation: blink 1.4s infinite; }
 .dots i:nth-child(2) { animation-delay: .2s; }
@@ -227,11 +227,11 @@ button { cursor: pointer; border: none; }
   display: flex; gap: 12px; max-width: 1180px; margin: 0 auto;
   align-items: flex-start;
 }
-.board-col { flex: 1; min-width: 0; max-width: 640px; margin: 0 auto; }
+.board-col { flex: 1; min-width: 0; max-width: 760px; margin: 0 auto; }
 
 .player-bar {
   display: flex; align-items: center; gap: 8px;
-  background: rgba(255, 253, 247, .92); border-radius: 12px; padding: 8px 12px; margin-bottom: 6px;
+  background: rgba(255, 253, 247, .92); border-radius: 10px; padding: 5px 10px; margin-bottom: 5px;
 }
 .player-bar .avatar { font-size: 24px; }
 .player-bar .who { display: flex; align-items: center; gap: 6px; flex: 1; }
@@ -320,7 +320,7 @@ button { cursor: pointer; border: none; }
 
 .turn-bar {
   text-align: center; background: rgba(255, 253, 247, .92); border-radius: 10px;
-  padding: 8px; margin-top: 8px; font-weight: 700; font-size: 14px; color: #5a3a1c;
+  padding: 6px; margin-top: 6px; font-weight: 700; font-size: 13px; color: #5a3a1c;
 }
 
 .review-bar { background: rgba(255, 253, 247, .95); border-radius: 12px; padding: 10px; margin-top: 8px; }
@@ -332,25 +332,30 @@ button { cursor: pointer; border: none; }
 .rv-actions { display: flex; gap: 6px; }
 
 .controls {
-  display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 8px;
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-top: 6px;
 }
 .ctrl {
-  background: rgba(255, 253, 247, .92); border-radius: 12px; padding: 8px 2px;
-  display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 16px;
+  background: rgba(255, 253, 247, .92); border-radius: 10px; padding: 5px 2px;
+  display: flex; flex-direction: column; align-items: center; gap: 1px; font-size: 15px;
+  line-height: 1.1;
 }
-.ctrl span { font-size: 10px; color: var(--muted); font-weight: 700; }
+.ctrl span { font-size: 9px; color: var(--muted); font-weight: 700; }
 .ctrl.danger span { color: var(--bad); }
 .ctrl:active { transform: scale(.96); }
 
-.emote-bar { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; justify-content: center; }
+.more-menu {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-top: 5px;
+}
+
+.emote-bar { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; justify-content: center; }
 .emote-bar button {
-  font-size: 22px; background: rgba(255, 253, 247, .92); border-radius: 10px; padding: 6px 10px;
+  font-size: 20px; background: rgba(255, 253, 247, .92); border-radius: 10px; padding: 5px 9px;
 }
 
 /* ---------- 사이드 패널 (기보/채팅) ---------- */
 .side-panel {
   width: 300px; flex: none; background: rgba(255, 253, 247, .95); border-radius: 14px;
-  padding: 10px; max-height: 82vh; display: flex; flex-direction: column;
+  padding: 10px; max-height: 82vh; max-height: 82dvh; display: flex; flex-direction: column;
 }
 .panel-tabs { display: flex; gap: 6px; margin-bottom: 8px; }
 .panel-tabs .tab { flex: 1; background: #f2e8d3; border-radius: 10px; padding: 8px; font-size: 13px; font-weight: 700; color: var(--muted); }
@@ -359,7 +364,7 @@ button { cursor: pointer; border: none; }
 .tab-pane { display: none; height: 100%; flex-direction: column; }
 .tab-pane.active { display: flex; }
 
-#moveLog { list-style: none; margin: 0; padding: 0; overflow-y: auto; max-height: 60vh; font-size: 13px; }
+#moveLog { list-style: none; margin: 0; padding: 0; overflow-y: auto; max-height: 60vh; max-height: 60dvh; font-size: 13px; }
 #moveLog li { display: flex; justify-content: space-between; padding: 4px 6px; border-radius: 6px; }
 #moveLog li:nth-child(odd) { background: #f6efdd; }
 #moveLog li.cur { background: #f2e0bb; font-weight: 800; }

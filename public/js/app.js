@@ -232,12 +232,42 @@
     });
   });
 
+  function inviteUrl() {
+    return `${location.origin}/?code=${state.online.code}`;
+  }
+  function inviteText() {
+    return `⚫⚪ 오목 한 판 하실래요? 초대 코드: ${state.online.code}\n${inviteUrl()}`;
+  }
+
+  function copyText(text, successMsg) {
+    const done = () => toast(successMsg);
+    const fail = () => {
+      // 클립보드 API를 못 쓰는 환경 대비: 직접 선택해서 복사할 수 있게 보여준다
+      window.prompt('아래 내용을 직접 복사해주세요', text);
+    };
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(fail);
+    } else {
+      fail();
+    }
+  }
+
+  $('#shareInvite').addEventListener('click', () => {
+    if (navigator.share) {
+      navigator.share({
+        title: '우리 가족 오목 게임',
+        text: `⚫⚪ 오목 한 판 하실래요? 초대 코드: ${state.online.code}`,
+        url: inviteUrl(),
+      }).catch(() => { /* 사용자가 공유 취소한 경우 등 — 무시 */ });
+    } else {
+      copyText(inviteText(), '초대 메시지를 복사했어요! 카톡이나 문자에 붙여넣어 보내주세요');
+    }
+  });
   $('#copyCode').addEventListener('click', () => {
-    navigator.clipboard?.writeText(state.online.code || '').then(() => toast('코드를 복사했어요!'));
+    copyText(state.online.code || '', '코드를 복사했어요!');
   });
   $('#copyLink').addEventListener('click', () => {
-    const url = `${location.origin}/?code=${state.online.code}`;
-    navigator.clipboard?.writeText(url).then(() => toast('초대 링크를 복사했어요!'));
+    copyText(inviteUrl(), '초대 링크를 복사했어요!');
   });
   $('#cancelRoom').addEventListener('click', () => {
     socket && socket.emit('room:leave');
@@ -389,6 +419,7 @@
     $('#coachPop').classList.add('hidden');
     $('#reviewBar').classList.add('hidden');
     $('#emoteBar').classList.add('hidden');
+    $('#moreMenu').classList.add('hidden');
     $('#moveLog').innerHTML = '';
     state.reviewing = false;
     $('#btnChat').classList.toggle('hidden', state.mode !== 'online');
@@ -670,6 +701,13 @@
     state.hintMark = hint;
     renderBoard();
     sndClick();
+  });
+
+  $('#btnMore').addEventListener('click', () => {
+    $('#moreMenu').classList.toggle('hidden');
+  });
+  $$('#moreMenu .ctrl').forEach((btn) => {
+    btn.addEventListener('click', () => $('#moreMenu').classList.add('hidden'));
   });
 
   $('#btnFlip').addEventListener('click', () => {
