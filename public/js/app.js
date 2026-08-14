@@ -336,6 +336,10 @@
       updateTurnUI();
     });
 
+    socket.on('game:move-rejected', () => {
+      toast('🚫 삼삼(3-3) 금수라 둘 수 없는 자리예요. 다른 곳에 둬주세요');
+    });
+
     socket.on('game:resigned', (payload) => {
       state.status = 'ended';
       state.winner = payload.winner;
@@ -483,6 +487,11 @@
     const dy = Number(e.currentTarget.dataset.dy);
     const { x, y } = fromDisplay(dx, dy);
     if (!R.isValidMove(state.board, x, y, SIZE)) return;
+    if (R.isForbiddenMove(state.board, x, y, state.turn, SIZE)) {
+      toast('🚫 삼삼(3-3) 금수예요! 흑은 열린 3을 동시에 두 개 만들 수 없어요');
+      sndClick();
+      return;
+    }
 
     if (state.mode === 'ai') {
       if (state.turn !== state.mySide) return;
@@ -875,6 +884,7 @@
       { ico: '↕️', t: '세로 다섯 줄', s: '세로로 같은 색 돌 5개를 연결해도 승리' },
       { ico: '↗️', t: '대각선 다섯 줄', s: '대각선 방향으로 5개를 연결해도 승리' },
       { ico: '💡', t: '막기도 중요해요', s: '상대가 4개를 이었다면 반드시 막아야 해요' },
+      { ico: '🚫', t: '흑돌은 삼삼 금지', s: '흑이 한 수로 열린 3을 두 개 동시에 만들 순 없어요 (백은 상관없어요)' },
     ];
     const wrap = $('#learnList');
     wrap.innerHTML = '';

@@ -172,6 +172,10 @@ io.on('connection', (socket) => {
     if (!me || me.color !== room.turn) return;
     const { x, y } = payload;
     if (!Rules.isValidMove(room.board, x, y, BOARD_SIZE)) return;
+    if (Rules.isForbiddenMove(room.board, x, y, me.color, BOARD_SIZE)) {
+      socket.emit('game:move-rejected', { x, y, reason: 'forbidden-33' });
+      return;
+    }
 
     room.board[y][x] = me.color;
     room.moves.push({ x, y, color: me.color });

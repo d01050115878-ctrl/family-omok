@@ -76,7 +76,8 @@
 
   function rankMoves(board, player, size) {
     size = size || board.length;
-    const candidates = getCandidates(board, size);
+    const candidates = getCandidates(board, size)
+      .filter((c) => !Rules.isForbiddenMove(board, c.x, c.y, player, size));
     const ranked = candidates.map((c) => ({
       x: c.x, y: c.y,
       score: evaluatePoint(board, c.x, c.y, player, size),

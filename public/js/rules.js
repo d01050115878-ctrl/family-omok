@@ -106,9 +106,30 @@
     return Math.floor(size / 2);
   }
 
+  // (x,y)에 player가 두었다고 가정할 때 만들어지는 "열린 3"(양쪽이 뚫린 3목)의 개수
+  function countOpenThrees(board, x, y, player, size) {
+    size = size || board.length;
+    let n = 0;
+    for (const [dx, dy] of DIRS) {
+      const { count, openEnds } = lineInfo(board, x, y, dx, dy, player, size);
+      if (count === 3 && openEnds === 2) n++;
+    }
+    return n;
+  }
+
+  // 삼삼(3-3) 금수 판정: 흑이 한 수로 열린 3을 두 개 이상 동시에 만들면 둘 수 없다.
+  // (렌주룰과 동일하게 흑에게만 적용하며, 그 수로 바로 이기는 경우는 예외로 허용한다)
+  function isForbiddenMove(board, x, y, player, size) {
+    size = size || board.length;
+    if (player !== BLACK) return false;
+    if (checkWin(board, x, y, player, size).win) return false;
+    return countOpenThrees(board, x, y, player, size) >= 2;
+  }
+
   return {
     SIZE, BLACK, WHITE, DIRS,
     createBoard, cloneBoard, inBounds, other,
     checkWin, isBoardFull, isValidMove, lineInfo, getCenter,
+    countOpenThrees, isForbiddenMove,
   };
 });
