@@ -227,7 +227,7 @@ button { cursor: pointer; border: none; }
   display: flex; gap: 12px; max-width: 1180px; margin: 0 auto;
   align-items: flex-start;
 }
-.board-col { flex: 1; min-width: 0; max-width: 760px; margin: 0 auto; }
+.board-col { flex: 1; min-width: 0; max-width: 880px; margin: 0 auto; }
 
 .player-bar {
   display: flex; align-items: center; gap: 8px;
@@ -242,7 +242,7 @@ button { cursor: pointer; border: none; }
 
 .board-area { position: relative; }
 #board {
-  position: relative; width: 100%; aspect-ratio: 1 / 1;
+  position: relative; width: 100%; aspect-ratio: 1 / 1; margin: 0 auto;
   background: linear-gradient(160deg, var(--wood), var(--wood-dark));
   border-radius: 10px; box-shadow: var(--shadow);
   padding: 4.2%;
@@ -354,8 +354,8 @@ button { cursor: pointer; border: none; }
 
 /* ---------- 사이드 패널 (기보/채팅) ---------- */
 .side-panel {
-  width: 300px; flex: none; background: rgba(255, 253, 247, .95); border-radius: 14px;
-  padding: 10px; max-height: 82vh; max-height: 82dvh; display: flex; flex-direction: column;
+  width: 230px; flex: none; background: rgba(255, 253, 247, .95); border-radius: 14px;
+  padding: 8px; max-height: 82vh; max-height: 82dvh; display: flex; flex-direction: column;
 }
 .panel-tabs { display: flex; gap: 6px; margin-bottom: 8px; }
 .panel-tabs .tab { flex: 1; background: #f2e8d3; border-radius: 10px; padding: 8px; font-size: 13px; font-weight: 700; color: var(--muted); }
@@ -407,7 +407,7 @@ button { cursor: pointer; border: none; }
 /* ---------- 반응형 ---------- */
 @media (max-width: 900px) {
   .game-wrap { flex-direction: column; }
-  .side-panel { width: 100%; max-height: 260px; }
+  .side-panel { width: 100%; max-height: 180px; }
 }
 @media (max-width: 480px) {
   .menu-grid { grid-template-columns: 1fr 1fr; }

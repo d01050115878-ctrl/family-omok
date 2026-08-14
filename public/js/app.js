@@ -405,6 +405,8 @@
     renderBoard();
     updateTurnUI();
     showScreen('screen-game');
+    sizeBoard();
+    requestAnimationFrame(sizeBoard);
 
     const chatEnabled = mode === 'online';
     $('#chatText').disabled = !chatEnabled;
@@ -450,8 +452,24 @@
   }
   function pct(i) { return (i / (SIZE - 1)) * 100 + '%'; }
 
+  // 보드를 화면에 맞게 처음부터 최대한 크게 보이도록 폭/높이를 직접 계산해서 고정한다.
+  // (일부 모바일 브라우저에서 aspect-ratio만으로는 첫 렌더 시 보드가 작게 잡히는 경우가 있어 방어적으로 처리)
+  function sizeBoard() {
+    const col = $('.board-col');
+    const boardEl = $('#board');
+    if (!col || !boardEl || !$('#screen-game').classList.contains('active')) return;
+    const availW = col.clientWidth;
+    const availH = window.innerHeight * 0.66;
+    const size = Math.max(260, Math.floor(Math.min(availW, availH)));
+    boardEl.style.width = size + 'px';
+    boardEl.style.height = size + 'px';
+  }
+  window.addEventListener('resize', sizeBoard);
+  window.addEventListener('orientationchange', () => setTimeout(sizeBoard, 200));
+
   function initBoardDOM() {
     const svg = $('#boardLines');
+    svg.setAttribute('viewBox', `0 0 ${SIZE - 1} ${SIZE - 1}`);
     svg.innerHTML = '';
     for (let i = 0; i < SIZE; i++) {
       svg.insertAdjacentHTML('beforeend', `<line x1="0" y1="${i}" x2="${SIZE - 1}" y2="${i}"></line>`);
@@ -460,7 +478,9 @@
 
     const stars = $('#stars');
     stars.innerHTML = '';
-    [3, 7, 11].forEach((yi) => [3, 7, 11].forEach((xi) => {
+    const mid = Math.floor((SIZE - 1) / 2);
+    const starLines = SIZE >= 13 ? [3, mid, SIZE - 4] : [mid];
+    starLines.forEach((yi) => starLines.forEach((xi) => {
       const s = document.createElement('div');
       s.className = 'star-pt';
       s.style.left = pct(xi); s.style.top = pct(yi);

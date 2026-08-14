@@ -9,7 +9,7 @@
   }
 })(typeof self !== 'undefined' ? self : this, function () {
 
-  const SIZE = 15; // 15 x 15 표준 오목판 (교차점 기준)
+  const SIZE = 19; // 19 x 19 확장 오목판 (교차점 기준) — 승부가 오래 갈 수 있도록 표준 바둑판 크기로 확장
   const BLACK = 'black';
   const WHITE = 'white';
 
