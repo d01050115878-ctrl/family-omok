@@ -38,6 +38,7 @@
     profile: { name: '', avatar: '🙂' },
     online: { code: null, token: null, myColor: null, connected: false },
     aiThinking: false,
+    hintMark: null,   // {x, y} — 다음 수를 둘 때까지 계속 표시
   };
 
   /* ---------------- 유틸 ---------------- */
@@ -293,6 +294,7 @@
       state.board = payload.board;
       state.turn = payload.turn;
       state.status = payload.status;
+      state.hintMark = null;
       if (payload.accepted) {
         state.moves.pop();
         toast('무르기를 받아들였어요');
@@ -322,6 +324,7 @@
       state.status = 'playing';
       state.winner = null;
       state.winLine = null;
+      state.hintMark = null;
       hideModal();
       resetGameScreenUI();
       renderBoard();
@@ -351,6 +354,7 @@
   /* ---------------- 게임 시작/초기화 ---------------- */
   function startGame(mode, skipReset) {
     state.mode = mode;
+    state.hintMark = null;
     if (!skipReset) {
       state.board = R.createBoard(SIZE);
       state.turn = R.BLACK;
@@ -479,6 +483,7 @@
   }
 
   function applyMove(x, y, color) {
+    state.hintMark = null;
     state.board[y][x] = color;
     state.moves.push({ x, y, color });
     const result = R.checkWin(state.board, x, y, color, SIZE);
@@ -529,6 +534,14 @@
         s.style.left = pct(dx); s.style.top = pct(dy);
         layer.appendChild(s);
       }
+    }
+
+    if (state.hintMark) {
+      const { dx, dy } = toDisplay(state.hintMark.x, state.hintMark.y);
+      const mark = document.createElement('div');
+      mark.className = 'hint-mark';
+      mark.style.left = pct(dx); mark.style.top = pct(dy);
+      layer.appendChild(mark);
     }
   }
 
@@ -635,6 +648,7 @@
     rebuildBoardFromMoves();
     state.status = 'playing';
     state.winner = null; state.winLine = null;
+    state.hintMark = null;
     $('#winBanner').classList.add('hidden');
     renderBoard(); rebuildMoveLog(); updateTurnUI();
     toast('한 수 물렀어요');
@@ -653,13 +667,9 @@
     if (state.mode === 'online' && who !== state.mySide) return;
     const hint = AI.getHint(state.board, who, SIZE);
     if (!hint) return;
-    const { dx, dy } = toDisplay(hint.x, hint.y);
-    const mark = document.createElement('div');
-    mark.className = 'hint-mark';
-    mark.style.left = pct(dx); mark.style.top = pct(dy);
-    $('#stones').appendChild(mark);
+    state.hintMark = hint;
+    renderBoard();
     sndClick();
-    setTimeout(() => mark.remove(), 1600);
   });
 
   $('#btnFlip').addEventListener('click', () => {

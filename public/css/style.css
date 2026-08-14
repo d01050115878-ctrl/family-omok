@@ -277,11 +277,18 @@ button { cursor: pointer; border: none; }
 .hover-ghost.white { background: rgba(255, 255, 255, .65); border: 1px solid rgba(150, 150, 150, .5); }
 
 .hint-mark {
-  position: absolute; width: 7.5%; aspect-ratio: 1/1; border-radius: 50%;
-  transform: translate(-50%, -50%); border: 3px solid #ff8f3c; pointer-events: none;
-  animation: pulse 1s infinite;
+  position: absolute; width: 9%; aspect-ratio: 1/1; border-radius: 50%;
+  transform: translate(-50%, -50%); border: 4px solid #ff7a1a; pointer-events: none;
+  background: rgba(255, 122, 26, .18);
+  box-shadow: 0 0 12px rgba(255, 122, 26, .85), inset 0 0 8px rgba(255, 122, 26, .5);
+  animation: pulse 1.1s infinite;
 }
-@keyframes pulse { 0%, 100% { opacity: .4; } 50% { opacity: 1; } }
+.hint-mark::after {
+  content: ''; position: absolute; inset: 0; margin: auto;
+  width: 30%; height: 30%; border-radius: 50%;
+  background: #ff7a1a;
+}
+@keyframes pulse { 0%, 100% { opacity: .7; transform: translate(-50%, -50%) scale(1); } 50% { opacity: 1; transform: translate(-50%, -50%) scale(1.12); } }
 
 .click-pt {
   position: absolute; width: 6.6%; aspect-ratio: 1/1; border-radius: 50%;
