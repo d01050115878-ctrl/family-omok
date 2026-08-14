@@ -74,24 +74,49 @@
     return off + def * 0.92;
   }
 
+  // (x,y)에 player가 두었을 때, 상대에게 "즉시 이길 수 있는 자리"가 2개 이상 생기는지 확인.
+  // (그렇다면 다음 상대 차례에 어느 쪽이든 막을 수 없는 필패 상황이므로 반드시 피해야 한다)
+  function createsOpponentDoubleWin(board, x, y, player, size) {
+    size = size || board.length;
+    const opp = Rules.other(player);
+    const b2 = Rules.cloneBoard(board);
+    b2[y][x] = player;
+    let wins = 0;
+    for (let yy = 0; yy < size; yy++) {
+      for (let xx = 0; xx < size; xx++) {
+        if (b2[yy][xx]) continue;
+        if (Rules.checkWin(b2, xx, yy, opp, size).win) {
+          wins++;
+          if (wins >= 2) return true;
+        }
+      }
+    }
+    return false;
+  }
+
   function rankMoves(board, player, size) {
     size = size || board.length;
     const candidates = getCandidates(board, size)
       .filter((c) => !Rules.isForbiddenMove(board, c.x, c.y, player, size));
-    const ranked = candidates.map((c) => ({
-      x: c.x, y: c.y,
-      score: evaluatePoint(board, c.x, c.y, player, size),
-    }));
+    const ranked = candidates.map((c) => {
+      let score = evaluatePoint(board, c.x, c.y, player, size);
+      // 이 수 자체가 승리가 아니면서, 상대에게 막을 수 없는 더블 승리 기회를 열어준다면 최악으로 취급
+      if (score < SCORE.FIVE && createsOpponentDoubleWin(board, c.x, c.y, player, size)) {
+        score -= SCORE.FIVE;
+      }
+      return { x: c.x, y: c.y, score };
+    });
     ranked.sort((a, b) => b.score - a.score);
     return ranked;
   }
 
   function pickWeightedRandom(list, count) {
     const pool = list.slice(0, Math.min(count, list.length));
-    const total = pool.reduce((s, m) => s + Math.max(1, m.score), 0);
+    const minScore = Math.min(0, ...pool.map((m) => m.score));
+    const total = pool.reduce((s, m) => s + (m.score - minScore + 1), 0);
     let r = Math.random() * total;
     for (const m of pool) {
-      r -= Math.max(1, m.score);
+      r -= (m.score - minScore + 1);
       if (r <= 0) return m;
     }
     return pool[0];
@@ -135,32 +160,34 @@
 
     switch (level) {
       case 1: {
-        // 절반 확률로 완전 무작위, 아니면 상위 60% 중 가중 무작위
-        if (Math.random() < 0.45) {
-          const r = ranked[Math.floor(Math.random() * ranked.length)];
+        // 30% 확률로 상위 절반 안에서 완전 무작위, 아니면 상위 50% 중 가중 무작위
+        if (Math.random() < 0.3) {
+          const half = ranked.slice(0, Math.max(4, Math.ceil(ranked.length * 0.5)));
+          const r = half[Math.floor(Math.random() * half.length)];
           return { x: r.x, y: r.y };
         }
-        const m = pickWeightedRandom(ranked, Math.max(4, Math.ceil(ranked.length * 0.6)));
+        const m = pickWeightedRandom(ranked, Math.max(4, Math.ceil(ranked.length * 0.5)));
         return { x: m.x, y: m.y };
       }
       case 2: {
-        const m = pickWeightedRandom(ranked, 6);
+        const m = pickWeightedRandom(ranked, 5);
         return { x: m.x, y: m.y };
       }
       case 3: {
-        if (Math.random() < 0.2) {
+        if (Math.random() < 0.15) {
           const m = pickWeightedRandom(ranked, 3);
           return { x: m.x, y: m.y };
         }
-        return { x: ranked[0].x, y: ranked[0].y };
+        const m = bestByLookahead(board, player, size, 6);
+        return { x: m.x, y: m.y };
       }
       case 4: {
-        const m = bestByLookahead(board, player, size, 6);
+        const m = bestByLookahead(board, player, size, 9);
         return { x: m.x, y: m.y };
       }
       case 5:
       default: {
-        const m = bestByLookahead(board, player, size, 10);
+        const m = bestByLookahead(board, player, size, 14);
         return { x: m.x, y: m.y };
       }
     }
@@ -168,7 +195,7 @@
 
   // 힌트용: 항상 최선 수 (표시용이므로 살짝 내다보기 포함)
   function getHint(board, player, size) {
-    const m = bestByLookahead(board, player, size, 8);
+    const m = bestByLookahead(board, player, size, 10);
     return m ? { x: m.x, y: m.y } : null;
   }
 
