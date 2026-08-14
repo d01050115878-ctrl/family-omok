@@ -1,0 +1,17 @@
+{
+  "name": "family-omok",
+  "version": "1.0.0",
+  "description": "가족과 함께하는 오목 게임 - 컴퓨터 대결, 둘이서 대결, 온라인 대결",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
+  }
+}

@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#8a5a2b">
+<meta name="description" content="가족과 함께 즐기는 오목! 컴퓨터 대국, 둘이서 두기, 초대 코드로 온라인 대국까지.">
+<title>우리 가족 오목 게임 ⚫⚪</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.85em' font-size='90'>⚫</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ============ 메인 화면 ============ -->
+  <section class="screen active" id="screen-home">
+    <div class="home-card">
+      <h1 class="title">⚫⚪ 우리 가족 오목 게임</h1>
+      <p class="subtitle">흑돌 ⚫ 과 백돌 ⚪ 의 다섯 줄 승부!</p>
+
+      <!-- 내 프로필 -->
+      <div class="profile-card">
+        <button class="avatar-btn" id="myAvatarBtn" title="아바타 바꾸기">
+          <span id="myAvatar">🙂</span>
+          <span class="edit-badge">✏️</span>
+        </button>
+        <div class="profile-fields">
+          <label class="field tight">
+            <span>내 아이디</span>
+            <input id="playerName" type="text" maxlength="10" placeholder="이름을 적어 주세요">
+          </label>
+          <p class="profile-hint">아바타를 눌러 바꿀 수 있어요</p>
+        </div>
+      </div>
+      <div class="avatar-picker hidden" id="avatarPicker"></div>
+
+      <div class="menu-grid">
+        <button class="menu-btn" data-go="screen-ai">
+          <span class="emoji">🤖</span>
+          <strong>컴퓨터와 두기</strong>
+          <small>혼자서 연습해요</small>
+        </button>
+        <button class="menu-btn" data-go="screen-local">
+          <span class="emoji">👨‍👩‍👧‍👦</span>
+          <strong>둘이서 두기</strong>
+          <small>한 기기에서 번갈아</small>
+        </button>
+        <button class="menu-btn" data-go="screen-online">
+          <span class="emoji">🌐</span>
+          <strong>온라인으로 두기</strong>
+          <small>초대 코드로 함께</small>
+        </button>
+        <button class="menu-btn" data-go="screen-learn">
+          <span class="emoji">📖</span>
+          <strong>오목 배우기</strong>
+          <small>규칙과 두는 법</small>
+        </button>
+      </div>
+
+      <details class="settings">
+        <summary>⚙️ 게임 설정</summary>
+        <div class="settings-body">
+          <label class="check"><input type="checkbox" id="optHelper" checked> <span>규칙 도우미 (마지막 수 강조 표시)</span></label>
+          <label class="check"><input type="checkbox" id="optCoach" checked> <span>수 평가 코치 (잘 둔 수 칭찬, 아쉬운 수 알림)</span></label>
+          <label class="check"><input type="checkbox" id="optSound" checked> <span>소리 효과</span></label>
+        </div>
+      </details>
+
+      <p class="footer-link">
+        <a href="https://family-games-hub.onrender.com/" id="homeHubLink">🎮 다른 가족 게임 보러 가기</a>
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ 컴퓨터 대국 설정 ============ -->
+  <section class="screen" id="screen-ai">
+    <div class="home-card">
+      <button class="back-btn" data-go="screen-home">← 뒤로</button>
+      <h2>🤖 컴퓨터와 두기</h2>
+
+      <h3 class="sec">실력 고르기</h3>
+      <div class="level-grid" id="levelGrid">
+        <button class="level-btn" data-level="1"><span>🐣</span><strong>초보</strong><small>이제 배웠어요</small></button>
+        <button class="level-btn selected" data-level="2"><span>🙂</span><strong>보통</strong><small>같이 놀 만해요</small></button>
+        <button class="level-btn" data-level="3"><span>🧐</span><strong>중수</strong><small>슬슬 어려워요</small></button>
+        <button class="level-btn" data-level="4"><span>😎</span><strong>잘함</strong><small>제법 셉니다</small></button>
+        <button class="level-btn" data-level="5"><span>🔥</span><strong>고수</strong><small>각오하세요!</small></button>
+      </div>
+
+      <h3 class="sec">내 돌 고르기</h3>
+      <div class="side-grid" id="sideGridAi">
+        <button class="side-btn black selected" data-side="black"><span class="p black">⚫</span><strong>흑돌 (먼저 둠)</strong></button>
+        <button class="side-btn white" data-side="white"><span class="p white">⚪</span><strong>백돌</strong></button>
+        <button class="side-btn rnd" data-side="random"><span class="p">🎲</span><strong>아무거나</strong></button>
+      </div>
+
+      <button class="primary big" id="startAi">대국 시작! 🎯</button>
+    </div>
+  </section>
+
+  <!-- ============ 둘이서 두기 ============ -->
+  <section class="screen" id="screen-local">
+    <div class="home-card">
+      <button class="back-btn" data-go="screen-home">← 뒤로</button>
+      <h2>👨‍👩‍👧‍👦 둘이서 두기</h2>
+      <p class="desc">한 기기에서 번갈아 두는 방식이에요. 흑돌이 먼저 둡니다.</p>
+      <div class="two-player">
+        <div class="tp-col">
+          <button class="avatar-btn small" id="blackAvatarBtn"><span id="blackAvatar">🐯</span><span class="edit-badge">✏️</span></button>
+          <input id="localBlackName" maxlength="10" placeholder="흑돌 플레이어">
+          <em class="tp-side black">흑돌 ⚫</em>
+        </div>
+        <div class="tp-vs">VS</div>
+        <div class="tp-col">
+          <button class="avatar-btn small" id="whiteAvatarBtn"><span id="whiteAvatar">🐰</span><span class="edit-badge">✏️</span></button>
+          <input id="localWhiteName" maxlength="10" placeholder="백돌 플레이어">
+          <em class="tp-side white">백돌 ⚪</em>
+        </div>
+      </div>
+      <button class="primary big" id="startLocal">대국 시작! 🎯</button>
+    </div>
+  </section>
+
+  <!-- ============ 온라인 ============ -->
+  <section class="screen" id="screen-online">
+    <div class="home-card">
+      <button class="back-btn" data-go="screen-home">← 뒤로</button>
+      <h2>🌐 온라인으로 두기</h2>
+
+      <div class="online-box">
+        <h3 class="sec">방 만들기</h3>
+        <p class="desc">방을 만들면 <b>초대 코드</b>가 나와요. 가족에게 알려 주세요!</p>
+        <div class="side-grid small" id="sideGridOnline">
+          <button class="side-btn black" data-side="black"><span class="p black">⚫</span><strong>흑돌</strong></button>
+          <button class="side-btn white" data-side="white"><span class="p white">⚪</span><strong>백돌</strong></button>
+          <button class="side-btn rnd selected" data-side="random"><span class="p">🎲</span><strong>아무거나</strong></button>
+        </div>
+        <button class="primary" id="createRoom">방 만들기 🏠</button>
+      </div>
+
+      <div class="online-box">
+        <h3 class="sec">초대 코드로 참가</h3>
+        <div class="code-row">
+          <input id="joinCode" maxlength="6" placeholder="예: ABC123" autocomplete="off" autocapitalize="characters">
+          <button class="primary" id="joinRoom">참가 🚪</button>
+        </div>
+      </div>
+
+      <div class="online-box hidden" id="waitingBox">
+        <h3 class="sec">초대 코드</h3>
+        <div class="code-display" id="roomCode">------</div>
+        <div class="wait-actions">
+          <button class="ghost" id="copyCode">📋 코드 복사</button>
+          <button class="ghost" id="copyLink">🔗 초대 링크 복사</button>
+        </div>
+        <p class="waiting">상대를 기다리는 중이에요 <span class="dots"><i>.</i><i>.</i><i>.</i></span></p>
+        <button class="ghost danger" id="cancelRoom">방 없애기</button>
+      </div>
+
+      <p class="net-status" id="netStatus"></p>
+    </div>
+  </section>
+
+  <!-- ============ 규칙 배우기 ============ -->
+  <section class="screen" id="screen-learn">
+    <div class="home-card wide">
+      <button class="back-btn" data-go="screen-home">← 뒤로</button>
+      <h2>📖 오목 배우기</h2>
+      <p class="desc">오목판은 가로 15줄, 세로 15줄이고 돌은 <b>선이 만나는 점</b> 위에 놓아요.
+        <b>흑돌 ⚫</b>이 먼저 두고, 번갈아 가며 한 수씩 둡니다.</p>
+
+      <div class="learn-list" id="learnList"></div>
+
+      <h3 class="sec">이기는 방법</h3>
+      <ul class="rule-list">
+        <li><b>다섯 목</b> — 가로, 세로, 대각선 중 한 방향으로 같은 색 돌 5개를 먼저 연결하면 이겨요.</li>
+        <li><b>장목도 인정</b> — 이 게임은 자유룰이라 6개 이상 이어져도 승리로 인정해요.</li>
+        <li><b>기권</b> — 상대가 항복하면 이겨요.</li>
+        <li><b>무승부</b> — 판이 가득 찼는데도 승부가 나지 않으면 비겨요.</li>
+        <li><b>금지된 수 없음</b> — 초보자도 쉽게 즐길 수 있도록 별도의 금수 규칙은 사용하지 않아요.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ 게임 화면 ============ -->
+  <section class="screen game" id="screen-game">
+    <div class="game-wrap">
+
+      <div class="board-col">
+        <div class="player-bar" id="barTop">
+          <span class="avatar" id="avatarTop">🐰</span>
+          <div class="who"><span class="dot"></span><span class="pname">상대</span></div>
+          <span class="stone-tag" id="stoneTagTop">⚪</span>
+        </div>
+
+        <div class="board-area">
+          <div id="board">
+            <svg id="boardLines" viewBox="0 0 14 14" preserveAspectRatio="none" aria-hidden="true"></svg>
+            <div id="stars"></div>
+            <div id="stones"></div>
+            <div id="clickLayer"></div>
+          </div>
+          <div class="win-banner hidden" id="winBanner"></div>
+          <div class="coach-pop hidden" id="coachPop"></div>
+          <div class="emote-layer" id="emoteLayer"></div>
+        </div>
+
+        <div class="player-bar me" id="barBottom">
+          <span class="avatar" id="avatarBottom">🐯</span>
+          <div class="who"><span class="dot"></span><span class="pname">나</span></div>
+          <span class="stone-tag" id="stoneTagBottom">⚫</span>
+        </div>
+
+        <div class="turn-bar" id="turnBar">흑돌 ⚫ 차례예요</div>
+
+        <div class="review-bar hidden" id="reviewBar">
+          <div class="rv-nav">
+            <button class="rv" id="rvFirst" title="처음으로">⏮</button>
+            <button class="rv" id="rvPrev" title="이전 수">◀</button>
+            <div class="rv-info">
+              <b id="rvCount">0 / 0</b>
+              <span id="rvMove">시작 위치예요</span>
+            </div>
+            <button class="rv" id="rvNext" title="다음 수">▶</button>
+            <button class="rv" id="rvLast" title="마지막으로">⏭</button>
+          </div>
+          <div class="rv-actions">
+            <button class="rv wide" id="rvExit">✖ 복기 끝내기</button>
+          </div>
+        </div>
+
+        <div class="controls">
+          <button class="ctrl" id="btnUndo">↩️<span>무르기</span></button>
+          <button class="ctrl" id="btnHint">💡<span>힌트</span></button>
+          <button class="ctrl" id="btnEmote">😊<span>이모티콘</span></button>
+          <button class="ctrl" id="btnChat">💬<span>대화</span></button>
+          <button class="ctrl" id="btnFlip">🔄<span>판 돌리기</span></button>
+          <button class="ctrl" id="btnLog">📜<span>기보</span></button>
+          <button class="ctrl" id="btnReview">🔍<span>복기</span></button>
+          <button class="ctrl danger" id="btnResign">🏳️<span>기권</span></button>
+          <button class="ctrl" id="btnHome">🏠<span>나가기</span></button>
+        </div>
+
+        <div class="emote-bar hidden" id="emoteBar"></div>
+      </div>
+
+      <aside class="side-panel" id="sidePanel">
+        <div class="panel-tabs">
+          <button class="tab active" data-tab="log">📜 기보</button>
+          <button class="tab" data-tab="chat">💬 대화</button>
+        </div>
+        <div class="panel-body">
+          <div class="tab-pane active" id="pane-log"><ol id="moveLog"></ol></div>
+          <div class="tab-pane" id="pane-chat">
+            <div id="chatList"></div>
+            <div class="chat-input">
+              <input id="chatText" maxlength="120" placeholder="메시지 보내기">
+              <button id="chatSend">보내기</button>
+            </div>
+            <div class="quick-msgs" id="quickMsgs"></div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ============ 모달 ============ -->
+  <div class="modal-back hidden" id="modalBack">
+    <div class="modal">
+      <div class="modal-emoji" id="modalEmoji">🎉</div>
+      <h3 id="modalTitle">알림</h3>
+      <p id="modalText"></p>
+      <div class="modal-actions" id="modalActions"></div>
+    </div>
+  </div>
+
+  <div class="toast hidden" id="toast"></div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="js/rules.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
