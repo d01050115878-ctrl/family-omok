@@ -360,6 +360,10 @@ button { cursor: pointer; border: none; }
 .panel-tabs { display: flex; gap: 6px; margin-bottom: 8px; }
 .panel-tabs .tab { flex: 1; background: #f2e8d3; border-radius: 10px; padding: 8px; font-size: 13px; font-weight: 700; color: var(--muted); }
 .panel-tabs .tab.active { background: var(--gold); color: #fff; }
+.panel-tabs .tab-close {
+  flex: none; width: 34px; background: #f2e8d3; border-radius: 10px; font-size: 15px;
+  font-weight: 800; color: var(--muted);
+}
 .panel-body { flex: 1; min-height: 0; }
 .tab-pane { display: none; height: 100%; flex-direction: column; }
 .tab-pane.active { display: flex; }

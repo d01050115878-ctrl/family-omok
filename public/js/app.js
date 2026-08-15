@@ -405,8 +405,6 @@
     renderBoard();
     updateTurnUI();
     showScreen('screen-game');
-    sizeBoard();
-    requestAnimationFrame(sizeBoard);
 
     const chatEnabled = mode === 'online';
     $('#chatText').disabled = !chatEnabled;
@@ -426,6 +424,7 @@
     $('#reviewBar').classList.add('hidden');
     $('#emoteBar').classList.add('hidden');
     $('#moreMenu').classList.add('hidden');
+    $('#sidePanel').classList.add('hidden');
     $('#moveLog').innerHTML = '';
     state.reviewing = false;
     $('#btnChat').classList.toggle('hidden', state.mode !== 'online');
@@ -452,20 +451,6 @@
   }
   function pct(i) { return (i / (SIZE - 1)) * 100 + '%'; }
 
-  // 보드를 화면에 맞게 처음부터 최대한 크게 보이도록 폭/높이를 직접 계산해서 고정한다.
-  // (일부 모바일 브라우저에서 aspect-ratio만으로는 첫 렌더 시 보드가 작게 잡히는 경우가 있어 방어적으로 처리)
-  function sizeBoard() {
-    const col = $('.board-col');
-    const boardEl = $('#board');
-    if (!col || !boardEl || !$('#screen-game').classList.contains('active')) return;
-    const availW = col.clientWidth;
-    const availH = window.innerHeight * 0.66;
-    const size = Math.max(260, Math.floor(Math.min(availW, availH)));
-    boardEl.style.width = size + 'px';
-    boardEl.style.height = size + 'px';
-  }
-  window.addEventListener('resize', sizeBoard);
-  window.addEventListener('orientationchange', () => setTimeout(sizeBoard, 200));
 
   function initBoardDOM() {
     const svg = $('#boardLines');
@@ -785,23 +770,33 @@
     showScreen('screen-home');
   }
 
-  /* ---------------- 기보 / 채팅 탭 ---------------- */
+  /* ---------------- 기보 / 채팅 탭 (평소엔 숨겨두고 눌렀을 때만 펼침) ---------------- */
+  function activateTab(tabName) {
+    $$('.panel-tabs .tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === tabName));
+    $$('.tab-pane').forEach((p) => p.classList.toggle('active', p.id === 'pane-' + tabName));
+  }
+  function openPanel(tabName) {
+    activateTab(tabName);
+    $('#sidePanel').classList.remove('hidden');
+    $('#sidePanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  function closePanel() {
+    $('#sidePanel').classList.add('hidden');
+  }
+  function togglePanel(tabName) {
+    const panel = $('#sidePanel');
+    const isOpen = !panel.classList.contains('hidden');
+    const isSameTab = $(`.panel-tabs .tab[data-tab="${tabName}"]`).classList.contains('active');
+    if (isOpen && isSameTab) closePanel();
+    else openPanel(tabName);
+  }
+
   $$('.panel-tabs .tab').forEach((tab) => {
-    tab.addEventListener('click', () => {
-      $$('.panel-tabs .tab').forEach((t) => t.classList.remove('active'));
-      $$('.tab-pane').forEach((p) => p.classList.remove('active'));
-      tab.classList.add('active');
-      $('#pane-' + tab.dataset.tab).classList.add('active');
-    });
+    tab.addEventListener('click', () => activateTab(tab.dataset.tab));
   });
-  $('#btnLog').addEventListener('click', () => {
-    $$('.panel-tabs .tab')[0].click();
-    $('#sidePanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  });
-  $('#btnChat').addEventListener('click', () => {
-    $$('.panel-tabs .tab')[1].click();
-    $('#sidePanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  });
+  $('#panelClose').addEventListener('click', closePanel);
+  $('#btnLog').addEventListener('click', () => togglePanel('log'));
+  $('#btnChat').addEventListener('click', () => togglePanel('chat'));
 
   function sendChat(text) {
     if (!text || state.mode !== 'online') return;

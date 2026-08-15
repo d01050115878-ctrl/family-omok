@@ -187,7 +187,7 @@
       }
       case 5:
       default: {
-        const m = bestByLookahead(board, player, size, 14);
+        const m = bestByLookahead(board, player, size, 22);
         return { x: m.x, y: m.y };
       }
     }
