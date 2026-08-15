@@ -277,7 +277,28 @@
   });
 
   function wireSocketEvents() {
-    socket.on('connect', () => { state.online.connected = true; });
+    socket.on('connect', () => {
+      state.online.connected = true;
+      // 재접속 시(백그라운드 전환, 네트워크 끊김 등) 서버 쪽 소켓 연결이 새로 맺어지면서
+      // 이전에 들어가 있던 방에서 자동으로 빠지므로, 저장해둔 코드/토큰으로 다시 합류를 시도한다.
+      // (이걸 안 하면 방장이 대기 중 연결이 끊겼다 붙었을 때 게임 시작 신호를 영영 못 받게 된다)
+      if (state.online.code && state.online.token) {
+        socket.emit('room:rejoin', { code: state.online.code, token: state.online.token }, (res) => {
+          if (!res || !res.ok) return;
+          state.online.myColor = res.color;
+          if (state.mode === 'online') {
+            state.board = res.board;
+            state.turn = res.turn;
+            state.status = res.status;
+            state.winner = res.winner;
+            state.winLine = res.winLine;
+            renderBoard();
+            updateTurnUI();
+            if (res.status === 'ended') onGameEnd(true);
+          }
+        });
+      }
+    });
     socket.on('disconnect', () => { state.online.connected = false; });
 
     socket.on('game:start', (payload) => {
