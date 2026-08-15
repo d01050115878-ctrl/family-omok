@@ -201,8 +201,8 @@
     // 난이도와 무관하게 항상 내다보기를 통해 최선의 수를 둔다.
     const critical = ranked[0].score >= SCORE.OPEN_THREE;
     if (critical) {
-      const topN = level >= 4 ? 10 : level >= 3 ? 8 : 6;
-      const depth = level >= 4 ? 3 : 2;
+      const topN = level >= 5 ? 14 : level >= 4 ? 11 : level >= 3 ? 9 : 6;
+      const depth = level >= 5 ? 4 : level >= 4 ? 4 : level >= 3 ? 3 : 2;
       const m = bestByLookahead(board, player, size, topN, depth);
       return { x: m.x, y: m.y };
     }
@@ -223,16 +223,16 @@
         return { x: m.x, y: m.y };
       }
       case 3: {
-        const m = bestByLookahead(board, player, size, 8, 2);
+        const m = bestByLookahead(board, player, size, 9, 3);
         return { x: m.x, y: m.y };
       }
       case 4: {
-        const m = bestByLookahead(board, player, size, 10, 3);
+        const m = bestByLookahead(board, player, size, 11, 4);
         return { x: m.x, y: m.y };
       }
       case 5:
       default: {
-        const m = bestByLookahead(board, player, size, 12, 3);
+        const m = bestByLookahead(board, player, size, 14, 4);
         return { x: m.x, y: m.y };
       }
     }
