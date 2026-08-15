@@ -1,5 +1,5 @@
 /* =========================================================
-   오목 AI 엔진 (휴리스틱 평가 + 얕은 탐색)
+   오목 AI 엔진 (휴리스틱 평가 + 미니맥스 탐색)
    ========================================================= */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) {
@@ -74,6 +74,17 @@
     return off + def * 0.92;
   }
 
+  // player가 지금 당장(현재 보드 그대로) 둘 수 있는, 즉시 5목이 완성되는 자리들
+  // (돌 근처 후보만 확인하면 충분 — 승리 라인은 항상 기존 돌들 곁에 생긴다)
+  function findImmediateWins(board, player, size) {
+    size = size || board.length;
+    const wins = [];
+    for (const c of getCandidates(board, size)) {
+      if (Rules.checkWin(board, c.x, c.y, player, size).win) wins.push(c);
+    }
+    return wins;
+  }
+
   // (x,y)에 player가 두었을 때, 상대에게 "즉시 이길 수 있는 자리"가 2개 이상 생기는지 확인.
   // (그렇다면 다음 상대 차례에 어느 쪽이든 막을 수 없는 필패 상황이므로 반드시 피해야 한다)
   function createsOpponentDoubleWin(board, x, y, player, size) {
@@ -81,17 +92,7 @@
     const opp = Rules.other(player);
     const b2 = Rules.cloneBoard(board);
     b2[y][x] = player;
-    let wins = 0;
-    for (let yy = 0; yy < size; yy++) {
-      for (let xx = 0; xx < size; xx++) {
-        if (b2[yy][xx]) continue;
-        if (Rules.checkWin(b2, xx, yy, opp, size).win) {
-          wins++;
-          if (wins >= 2) return true;
-        }
-      }
-    }
-    return false;
+    return findImmediateWins(b2, opp, size).length >= 2;
   }
 
   function rankMoves(board, player, size) {
@@ -122,29 +123,65 @@
     return pool[0];
   }
 
-  // 2-수 내다보기: AI가 후보에 두었을 때, 상대의 최선 응수 점수를 최소화하는 수 선택
-  function bestByLookahead(board, player, size, topN) {
-    const ranked = rankMoves(board, player, size);
-    const top = ranked.slice(0, topN);
+  // player 시점에서 반드시 처리해야 할 상황(즉시 승리 / 상대 즉시 승리 저지)이 있는지 확인.
+  // 있다면 그 수를 강제로 반환하고, 없다면 null.
+  // 난이도(레벨)와 무관하게 항상 적용해서 "뻔한 3목/4목을 놓친다" 같은 실수를 없앤다.
+  function forcedMove(board, player, size) {
+    size = size || board.length;
     const opp = Rules.other(player);
-    let best = null;
-    for (const move of top) {
-      // 즉시 승리라면 바로 선택
-      if (move.score >= SCORE.FIVE) return move;
 
-      const b2 = Rules.cloneBoard(board);
-      b2[move.y][move.x] = player;
-      const win = Rules.checkWin(b2, move.x, move.y, player, size);
-      if (win.win) return move;
+    const myWins = findImmediateWins(board, player, size)
+      .filter((c) => !Rules.isForbiddenMove(board, c.x, c.y, player, size));
+    if (myWins.length) return myWins[0];
 
-      const oppRanked = rankMoves(b2, opp, size);
-      const oppBest = oppRanked.length ? oppRanked[0].score : 0;
-      const combined = move.score - oppBest * 0.98;
-      if (!best || combined > best.combined) {
-        best = { ...move, combined };
+    const oppWins = findImmediateWins(board, opp, size);
+    if (oppWins.length === 1) {
+      if (!Rules.isForbiddenMove(board, oppWins[0].x, oppWins[0].y, player, size)) {
+        return oppWins[0];
       }
+    } else if (oppWins.length >= 2) {
+      // 이미 필패 상황(막을 수 없는 더블 승리) — 그나마 가장 나은 수를 시도
+      return null;
     }
-    return best || ranked[0];
+    return null;
+  }
+
+  // 미니맥스(네가맥스 + 알파-베타 가지치기): depth번의 내 수-상대 수 교환까지 내다본다.
+  function negamax(board, player, size, depth, topN, alpha, beta) {
+    const forced = forcedMove(board, player, size);
+    if (forced) {
+      const score = Rules.checkWin(board, forced.x, forced.y, player, size).win ? SCORE.FIVE : SCORE.FOUR;
+      return { score, move: forced };
+    }
+
+    const ranked = rankMoves(board, player, size);
+    if (!ranked.length) return { score: 0, move: null };
+    if (ranked[0].score >= SCORE.FIVE) return { score: SCORE.FIVE, move: ranked[0] };
+    if (depth <= 0) return { score: ranked[0].score, move: ranked[0] };
+
+    const opp = Rules.other(player);
+    let bestMove = ranked[0];
+    let bestScore = -Infinity;
+    for (const cand of ranked.slice(0, topN)) {
+      const b2 = Rules.cloneBoard(board);
+      b2[cand.y][cand.x] = player;
+      let score;
+      if (Rules.checkWin(b2, cand.x, cand.y, player, size).win) {
+        score = SCORE.FIVE;
+      } else {
+        const sub = negamax(b2, opp, size, depth - 1, topN, -beta, -alpha);
+        score = cand.score - sub.score * 0.98;
+      }
+      if (score > bestScore) { bestScore = score; bestMove = cand; }
+      if (bestScore > alpha) alpha = bestScore;
+      if (alpha >= beta) break;
+    }
+    return { score: bestScore, move: bestMove };
+  }
+
+  function bestByLookahead(board, player, size, topN, depth) {
+    const { move } = negamax(board, player, size, depth || 1, topN, -Infinity, Infinity);
+    return move;
   }
 
   /**
@@ -152,11 +189,23 @@
    */
   function getMove(board, player, level, size) {
     size = size || board.length;
+
+    // 승리 수 / 상대의 즉시 승리 저지는 난이도와 상관없이 항상 정확하게 처리한다.
+    const forced = forcedMove(board, player, size);
+    if (forced) return { x: forced.x, y: forced.y };
+
     const ranked = rankMoves(board, player, size);
     if (!ranked.length) return null;
 
-    // 즉시 승리 수가 있으면 난이도 무관하게 항상 선택 (너무 허무하게 지지 않도록)
-    if (ranked[0].score >= SCORE.FIVE) return { x: ranked[0].x, y: ranked[0].y };
+    // 열린 3 이상의 실전 위협(공격/수비)이 걸린 급박한 상황이면
+    // 난이도와 무관하게 항상 내다보기를 통해 최선의 수를 둔다.
+    const critical = ranked[0].score >= SCORE.OPEN_THREE;
+    if (critical) {
+      const topN = level >= 4 ? 10 : level >= 3 ? 8 : 6;
+      const depth = level >= 4 ? 3 : 2;
+      const m = bestByLookahead(board, player, size, topN, depth);
+      return { x: m.x, y: m.y };
+    }
 
     switch (level) {
       case 1: {
@@ -174,28 +223,26 @@
         return { x: m.x, y: m.y };
       }
       case 3: {
-        if (Math.random() < 0.15) {
-          const m = pickWeightedRandom(ranked, 3);
-          return { x: m.x, y: m.y };
-        }
-        const m = bestByLookahead(board, player, size, 6);
+        const m = bestByLookahead(board, player, size, 8, 2);
         return { x: m.x, y: m.y };
       }
       case 4: {
-        const m = bestByLookahead(board, player, size, 9);
+        const m = bestByLookahead(board, player, size, 10, 3);
         return { x: m.x, y: m.y };
       }
       case 5:
       default: {
-        const m = bestByLookahead(board, player, size, 22);
+        const m = bestByLookahead(board, player, size, 12, 3);
         return { x: m.x, y: m.y };
       }
     }
   }
 
-  // 힌트용: 항상 최선 수 (표시용이므로 살짝 내다보기 포함)
+  // 힌트용: 항상 최선 수 (표시용이므로 내다보기 포함)
   function getHint(board, player, size) {
-    const m = bestByLookahead(board, player, size, 10);
+    const forced = forcedMove(board, player, size);
+    if (forced) return { x: forced.x, y: forced.y };
+    const m = bestByLookahead(board, player, size, 10, 2);
     return m ? { x: m.x, y: m.y } : null;
   }
 

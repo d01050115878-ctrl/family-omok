@@ -25,7 +25,7 @@
     moves: [],
     winner: null,
     winLine: null,
-    aiLevel: 2,
+    aiLevel: 3,
     mySide: R.BLACK,      // ai 모드에서 내 돌 색
     players: {
       black: { name: '흑돌', avatar: '⚫' },
