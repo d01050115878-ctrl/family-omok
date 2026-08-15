@@ -209,7 +209,7 @@
       state.online.code = res.code;
       state.online.token = res.token;
       state.online.myColor = res.color;
-      sessionStorage.setItem('omok_room', JSON.stringify({ code: res.code, token: res.token }));
+      localStorage.setItem('omok_room', JSON.stringify({ code: res.code, token: res.token }));
       $('#roomCode').textContent = res.code;
       $('#waitingBox').classList.remove('hidden');
     });
@@ -228,7 +228,7 @@
       state.online.code = res.code;
       state.online.token = res.token;
       state.online.myColor = res.color;
-      sessionStorage.setItem('omok_room', JSON.stringify({ code: res.code, token: res.token }));
+      localStorage.setItem('omok_room', JSON.stringify({ code: res.code, token: res.token }));
     });
   });
 
@@ -271,7 +271,7 @@
   });
   $('#cancelRoom').addEventListener('click', () => {
     socket && socket.emit('room:leave');
-    sessionStorage.removeItem('omok_room');
+    localStorage.removeItem('omok_room');
     $('#waitingBox').classList.add('hidden');
     state.online = { code: null, token: null, myColor: null, connected: false };
   });
@@ -789,7 +789,7 @@
   function goHome() {
     if (state.mode === 'online' && socket) {
       socket.emit('room:leave');
-      sessionStorage.removeItem('omok_room');
+      localStorage.removeItem('omok_room');
     }
     state.mode = null;
     state.online = { code: null, token: null, myColor: null, connected: false };
@@ -971,11 +971,11 @@
 
     // 게임 도중 새로고침 대비: 저장된 방 정보가 있으면 재접속 시도
     try {
-      const saved = JSON.parse(sessionStorage.getItem('omok_room') || 'null');
+      const saved = JSON.parse(localStorage.getItem('omok_room') || 'null');
       if (saved && saved.code && saved.token) {
         ensureSocket();
         socket.emit('room:rejoin', saved, (res) => {
-          if (!res || !res.ok) { sessionStorage.removeItem('omok_room'); return; }
+          if (!res || !res.ok) { localStorage.removeItem('omok_room'); return; }
           state.online.code = res.code;
           state.online.token = res.token;
           state.online.myColor = res.color;

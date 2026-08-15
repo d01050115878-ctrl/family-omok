@@ -23,7 +23,7 @@ app.get('/healthz', (req, res) => res.send('ok'));
 /** @type {Map<string, Room>} */
 const rooms = new Map();
 const ROOM_TTL_MS = 10 * 60 * 1000; // 상대 없이 방치되면 10분 후 정리
-const RECONNECT_GRACE_MS = 2 * 60 * 1000;
+const RECONNECT_GRACE_MS = 10 * 60 * 1000; // 브라우저를 닫았다 다시 열어도 이어할 수 있도록 넉넉하게
 
 function genCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
