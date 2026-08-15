@@ -434,7 +434,7 @@ button { cursor: pointer; border: none; }
   .menu-grid { grid-template-columns: 1fr 1fr; }
   .level-grid { grid-template-columns: repeat(5, 1fr); }
   .controls { grid-template-columns: repeat(5, 1fr); }
-  /* 작은 화면에서는 돌을 더 작게, 탭 영역은 더 넉넉하게 */
-  .stone, .hover-ghost { width: 3.4%; }
+  /* 작은 화면에서는 돌을 살짝 크게, 탭 영역은 더 넉넉하게 */
+  .stone, .hover-ghost { width: 4.4%; }
   .click-pt { width: 7.6%; }
 }
