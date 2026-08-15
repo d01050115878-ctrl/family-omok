@@ -648,6 +648,10 @@
   function onGameEnd(skipRender) {
     sndWin();
     if (!skipRender) renderBoard();
+    showEndModal();
+  }
+
+  function showEndModal() {
     let title, text, emoji;
     if (state.winner === 'draw') {
       emoji = '🤝'; title = '무승부!'; text = '판이 가득 찼어요. 다음엔 꼭 이겨봐요!';
@@ -663,6 +667,9 @@
     const actions = [
       { label: '🏠 처음으로', cls: 'ghost', onClick: goHome },
     ];
+    if (state.moves.length) {
+      actions.unshift({ label: '🔍 복기하기', cls: 'ghost', onClick: startReview });
+    }
     if (state.mode === 'online') {
       actions.unshift({ label: '🔁 재대결', cls: 'primary', onClick: () => { socket.emit('game:rematch-request'); toast('재대결을 요청했어요. 상대방을 기다리는 중...'); } });
     } else {
@@ -844,16 +851,18 @@
   }
 
   /* ---------------- 복기 ---------------- */
-  $('#btnReview').addEventListener('click', () => {
+  function startReview() {
     state.reviewing = true;
     state.reviewIndex = state.moves.length;
     $('#reviewBar').classList.remove('hidden');
     renderReview();
-  });
+  }
+  $('#btnReview').addEventListener('click', startReview);
   $('#rvExit').addEventListener('click', () => {
     state.reviewing = false;
     $('#reviewBar').classList.add('hidden');
     renderBoard();
+    if (state.status === 'ended') showEndModal();
   });
   $('#rvFirst').addEventListener('click', () => { state.reviewIndex = 0; renderReview(); });
   $('#rvPrev').addEventListener('click', () => { state.reviewIndex = Math.max(0, state.reviewIndex - 1); renderReview(); });
@@ -882,11 +891,34 @@
       }
     }
     $('#rvCount').textContent = `${idx} / ${state.moves.length}`;
+    const qEl = $('#rvQuality');
     if (idx === 0) {
       $('#rvMove').textContent = '시작 위치예요';
+      qEl.classList.add('hidden');
     } else {
       const m = state.moves[idx - 1];
       $('#rvMove').textContent = `${colorStone(m.color)} ${COLS[m.x]}${SIZE - m.y}`;
+
+      // 이 수를 두기 직전 상태를 복원해 AI 기준으로 얼마나 좋은 수였는지 평가
+      const before = R.cloneBoard(board);
+      before[m.y][m.x] = null;
+      const q = AI.evaluateMoveQuality(before, m.x, m.y, m.color, SIZE);
+      const label = { great: '✨ 최고의 수', good: '👍 좋은 수', ok: '무난한 수', bad: '😬 아쉬운 수' }[q.quality] || '';
+      qEl.textContent = label;
+      qEl.className = 'rv-quality ' + q.quality;
+
+      // 실수였던 수는 그 자리에서 더 좋았던 수를 함께 보여줘서 패인을 파악하도록 돕는다
+      if (q.quality === 'bad') {
+        const best = AI.getHint(before, m.color, SIZE);
+        if (best && !(best.x === m.x && best.y === m.y)) {
+          const { dx: bdx, dy: bdy } = toDisplay(best.x, best.y);
+          const mark = document.createElement('div');
+          mark.className = 'rv-best-mark';
+          mark.style.left = pct(bdx); mark.style.top = pct(bdy);
+          layer.appendChild(mark);
+          qEl.textContent += ` · 추천: ${colorStone(m.color)} ${COLS[best.x]}${SIZE - best.y}`;
+        }
+      }
     }
     $$('#moveLog li').forEach((li) => li.classList.toggle('cur', Number(li.dataset.idx) === idx - 1));
   }
