@@ -12,6 +12,7 @@
   const SIZE = 19; // 19 x 19 확장 오목판 (교차점 기준) — 승부가 오래 갈 수 있도록 표준 바둑판 크기로 확장
   const BLACK = 'black';
   const WHITE = 'white';
+  const MAX_UNDOS = 3; // 한 판에서 각 플레이어가 쓸 수 있는 무르기 횟수
 
   const DIRS = [
     [1, 0],   // 가로
@@ -127,7 +128,7 @@
   }
 
   return {
-    SIZE, BLACK, WHITE, DIRS,
+    SIZE, BLACK, WHITE, DIRS, MAX_UNDOS,
     createBoard, cloneBoard, inBounds, other,
     checkWin, isBoardFull, isValidMove, lineInfo, getCenter,
     countOpenThrees, isForbiddenMove,

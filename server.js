@@ -16,6 +16,7 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 3000;
 const BOARD_SIZE = Rules.SIZE;
+const MAX_UNDOS = Rules.MAX_UNDOS;
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/healthz', (req, res) => res.send('ok'));
@@ -49,6 +50,7 @@ function makeRoom(code) {
     winner: null,
     winLine: null,
     undoRequest: null, // {byToken}
+    undoCounts: { [Rules.BLACK]: 0, [Rules.WHITE]: 0 }, // 색깔별로 사용한 무르기 횟수
     rematchVotes: new Set(),
     createdAt: Date.now(),
     lastActivity: Date.now(),
@@ -135,7 +137,7 @@ io.on('connection', (socket) => {
     room.status = 'playing';
     io.to(code).emit('game:start', {
       board: room.board, turn: room.turn, size: BOARD_SIZE,
-      players: roomPublicPlayers(room),
+      players: roomPublicPlayers(room), undoCounts: room.undoCounts,
     });
   });
 
@@ -160,7 +162,7 @@ io.on('connection', (socket) => {
       ok: true, code, token: p.token, color: p.color, size: BOARD_SIZE,
       board: room.board, turn: room.turn, status: room.status,
       winner: room.winner, winLine: room.winLine,
-      players: roomPublicPlayers(room),
+      players: roomPublicPlayers(room), undoCounts: room.undoCounts,
     });
     socket.to(code).emit('room:opponent-reconnected', { players: roomPublicPlayers(room) });
   });
@@ -203,10 +205,18 @@ io.on('connection', (socket) => {
     });
   });
 
-  socket.on('game:undo-request', () => {
+  socket.on('game:undo-request', (payload, cb) => {
+    if (typeof payload === 'function') { cb = payload; payload = {}; }
     const room = rooms.get(socket.data.roomCode);
     if (!room || room.status !== 'playing' || !room.moves.length) return;
+    const me = playerByToken(room, socket.data.token);
+    if (!me) return;
+    if (room.undoCounts[me.color] >= MAX_UNDOS) {
+      cb && cb({ ok: false, message: `무르기는 한 판에 ${MAX_UNDOS}번까지만 할 수 있어요` });
+      return;
+    }
     room.undoRequest = { byToken: socket.data.token };
+    cb && cb({ ok: true });
     socket.to(room.code).emit('game:undo-requested');
   });
 
@@ -215,6 +225,7 @@ io.on('connection', (socket) => {
     if (!room || !room.undoRequest) return;
     const accept = !!payload.accept;
     if (accept) {
+      const requester = playerByToken(room, room.undoRequest.byToken);
       const last = room.moves.pop();
       if (last) {
         room.board[last.y][last.x] = null;
@@ -223,10 +234,12 @@ io.on('connection', (socket) => {
         room.winner = null;
         room.winLine = null;
       }
+      if (requester) room.undoCounts[requester.color] = (room.undoCounts[requester.color] || 0) + 1;
     }
     room.undoRequest = null;
     io.to(room.code).emit('game:undo-result', {
       accepted: accept, board: room.board, turn: room.turn, status: room.status,
+      undoCounts: room.undoCounts,
     });
   });
 
@@ -253,12 +266,13 @@ io.on('connection', (socket) => {
       room.winner = null;
       room.winLine = null;
       room.rematchVotes.clear();
+      room.undoCounts = { [Rules.BLACK]: 0, [Rules.WHITE]: 0 };
       // 선공/후공(색) 서로 교대
       Object.values(room.players).forEach((p) => {
         p.color = p.color === Rules.BLACK ? Rules.WHITE : Rules.BLACK;
       });
       io.to(room.code).emit('game:rematch-start', {
-        board: room.board, turn: room.turn, players: roomPublicPlayers(room),
+        board: room.board, turn: room.turn, players: roomPublicPlayers(room), undoCounts: room.undoCounts,
       });
     }
   });

@@ -7,6 +7,7 @@
   const R = window.OmokRules;
   const AI = window.OmokAI;
   const SIZE = R.SIZE;
+  const MAX_UNDOS = R.MAX_UNDOS;
 
   const $ = (sel, el) => (el || document).querySelector(sel);
   const $$ = (sel, el) => Array.from((el || document).querySelectorAll(sel));
@@ -39,6 +40,7 @@
     online: { code: null, token: null, myColor: null, connected: false },
     aiThinking: false,
     hintMark: null,   // {x, y} — 다음 수를 둘 때까지 계속 표시
+    undoCounts: { black: 0, white: 0 }, // 각 색이 사용한 무르기 횟수
   };
 
   /* ---------------- 유틸 ---------------- */
@@ -292,8 +294,10 @@
             state.status = res.status;
             state.winner = res.winner;
             state.winLine = res.winLine;
+            state.undoCounts = res.undoCounts || { black: 0, white: 0 };
             renderBoard();
             updateTurnUI();
+            updateUndoUI();
             if (res.status === 'ended') onGameEnd(true);
           }
         });
@@ -312,6 +316,7 @@
       state.turn = payload.turn;
       state.moves = [];
       state.mySide = meColor;
+      state.undoCounts = payload.undoCounts || { black: 0, white: 0 };
       startGame('online', true);
       toast('상대방과 연결됐어요! 게임 시작 🎉');
     });
@@ -346,6 +351,7 @@
       state.turn = payload.turn;
       state.status = payload.status;
       state.hintMark = null;
+      if (payload.undoCounts) state.undoCounts = payload.undoCounts;
       if (payload.accepted) {
         state.moves.pop();
         toast('무르기를 받아들였어요');
@@ -355,6 +361,7 @@
       renderBoard();
       rebuildMoveLog();
       updateTurnUI();
+      updateUndoUI();
     });
 
     socket.on('game:move-rejected', () => {
@@ -380,6 +387,7 @@
       state.winner = null;
       state.winLine = null;
       state.hintMark = null;
+      state.undoCounts = payload.undoCounts || { black: 0, white: 0 };
       hideModal();
       resetGameScreenUI();
       renderBoard();
@@ -417,6 +425,7 @@
       state.status = 'playing';
       state.winner = null;
       state.winLine = null;
+      state.undoCounts = { black: 0, white: 0 };
     } else {
       state.status = 'playing';
     }
@@ -450,6 +459,18 @@
     state.reviewing = false;
     $('#btnChat').classList.toggle('hidden', state.mode !== 'online');
     $('#btnUndo').classList.remove('hidden');
+    updateUndoUI();
+  }
+
+  // 무르기 버튼 상태를 다음에 무를 색 기준으로 갱신한다
+  function updateUndoUI() {
+    const btn = $('#btnUndo');
+    let color;
+    if (state.mode === 'ai' || state.mode === 'online') color = state.mySide;
+    else if (state.moves.length) color = state.moves[state.moves.length - 1].color; // local: 방금 둔 사람 기준
+    const remaining = color ? Math.max(0, MAX_UNDOS - state.undoCounts[color]) : MAX_UNDOS;
+    btn.disabled = color != null && remaining <= 0;
+    btn.title = color != null ? `무르기 (남은 횟수 ${remaining}/${MAX_UNDOS})` : '무르기';
   }
 
   function buildQuickMsgs() {
@@ -566,6 +587,7 @@
     renderBoard();
     appendMoveLog(state.moves.length - 1);
     updateTurnUI();
+    updateUndoUI();
   }
 
   function scheduleAiMove() {
@@ -704,18 +726,35 @@
     if (state.reviewing) return;
     if (state.mode === 'online') {
       if (!state.moves.length) return;
-      socket.emit('game:undo-request');
+      if (state.undoCounts[state.mySide] >= MAX_UNDOS) {
+        toast(`무르기는 한 판에 ${MAX_UNDOS}번까지만 할 수 있어요`);
+        return;
+      }
+      socket.emit('game:undo-request', {}, (res) => {
+        if (res && res.ok === false) toast(res.message || `무르기는 한 판에 ${MAX_UNDOS}번까지만 할 수 있어요`);
+      });
       toast('무르기를 요청했어요. 상대방의 응답을 기다려요...');
       return;
     }
     if (!state.moves.length || state.aiThinking) return;
     if (state.mode === 'ai') {
+      if (state.undoCounts[state.mySide] >= MAX_UNDOS) {
+        toast(`무르기는 한 판에 ${MAX_UNDOS}번까지만 할 수 있어요`);
+        return;
+      }
+      state.undoCounts[state.mySide]++;
       // 내 수 + AI 수를 함께 되돌려 다시 내 차례로
       state.moves.pop();
       if (state.moves.length && state.moves[state.moves.length - 1].color === state.mySide) {
         state.moves.pop();
       }
     } else {
+      const lastColor = state.moves[state.moves.length - 1].color;
+      if (state.undoCounts[lastColor] >= MAX_UNDOS) {
+        toast(`${colorName(lastColor)}은(는) 무르기를 다 썼어요 (한 판에 ${MAX_UNDOS}번까지)`);
+        return;
+      }
+      state.undoCounts[lastColor]++;
       state.moves.pop();
     }
     rebuildBoardFromMoves();
@@ -723,7 +762,7 @@
     state.winner = null; state.winLine = null;
     state.hintMark = null;
     $('#winBanner').classList.add('hidden');
-    renderBoard(); rebuildMoveLog(); updateTurnUI();
+    renderBoard(); rebuildMoveLog(); updateTurnUI(); updateUndoUI();
     toast('한 수 물렀어요');
   });
 
@@ -986,6 +1025,7 @@
           state.winner = res.winner;
           state.winLine = res.winLine;
           state.moves = [];
+          state.undoCounts = res.undoCounts || { black: 0, white: 0 };
           const meP = res.players.find((p) => p.token === res.token);
           const oppP = res.players.find((p) => p.token !== res.token);
           state.players.black = res.color === R.BLACK ? profileOf(meP) : profileOf(oppP);

@@ -229,7 +229,7 @@ button { cursor: pointer; border: none; }
 }
 .board-col {
   flex: 1; width: 100%; min-width: 0; margin: 0 auto;
-  max-width: min(1100px, calc(100dvh - 190px));
+  max-width: min(1100px, calc(100dvh - 160px));
 }
 
 .player-bar {
@@ -248,17 +248,17 @@ button { cursor: pointer; border: none; }
   position: relative; width: 100%; aspect-ratio: 1 / 1; margin: 0 auto;
   background: linear-gradient(160deg, var(--wood), var(--wood-dark));
   border-radius: 10px; box-shadow: var(--shadow);
-  padding: 4.2%;
+  padding: 2.6%;
 }
-#boardLines { position: absolute; inset: 4.2%; width: 91.6%; height: 91.6%; overflow: visible; }
+#boardLines { position: absolute; inset: 2.6%; width: 94.8%; height: 94.8%; overflow: visible; }
 #boardLines line { stroke: var(--board-line); stroke-width: .045; }
 #stars circle { fill: var(--board-line); }
-#stars, #stones, #clickLayer { position: absolute; inset: 4.2%; width: 91.6%; height: 91.6%; }
+#stars, #stones, #clickLayer { position: absolute; inset: 2.6%; width: 94.8%; height: 94.8%; }
 
 .star-pt { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: var(--board-line); transform: translate(-50%, -50%); }
 
 .stone {
-  position: absolute; width: 4.2%; aspect-ratio: 1/1; border-radius: 50%;
+  position: absolute; width: 4.5%; aspect-ratio: 1/1; border-radius: 50%;
   transform: translate(-50%, -50%); box-shadow: 0 2px 4px rgba(0, 0, 0, .35);
   transition: transform .12s;
 }
@@ -273,7 +273,7 @@ button { cursor: pointer; border: none; }
 .stone.win-stone { box-shadow: 0 0 0 3px var(--good), 0 2px 4px rgba(0, 0, 0, .35); }
 
 .hover-ghost {
-  position: absolute; width: 4.2%; aspect-ratio: 1/1; border-radius: 50%;
+  position: absolute; width: 4.5%; aspect-ratio: 1/1; border-radius: 50%;
   transform: translate(-50%, -50%); opacity: 0; pointer-events: none;
 }
 .hover-ghost.black { background: rgba(20, 20, 20, .45); }
@@ -294,7 +294,7 @@ button { cursor: pointer; border: none; }
 @keyframes pulse { 0%, 100% { opacity: .7; transform: translate(-50%, -50%) scale(1); } 50% { opacity: 1; transform: translate(-50%, -50%) scale(1.12); } }
 
 .click-pt {
-  position: absolute; width: 5.5%; aspect-ratio: 1/1; border-radius: 50%;
+  position: absolute; width: 6%; aspect-ratio: 1/1; border-radius: 50%;
   transform: translate(-50%, -50%); background: transparent; border: none; padding: 0;
 }
 
@@ -359,6 +359,8 @@ button { cursor: pointer; border: none; }
 .ctrl span { font-size: 9px; color: var(--muted); font-weight: 700; }
 .ctrl.danger span { color: var(--bad); }
 .ctrl:active { transform: scale(.96); }
+.ctrl:disabled { opacity: .4; }
+.ctrl:disabled:active { transform: none; }
 
 .more-menu {
   display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-top: 5px;
@@ -435,6 +437,6 @@ button { cursor: pointer; border: none; }
   .level-grid { grid-template-columns: repeat(5, 1fr); }
   .controls { grid-template-columns: repeat(5, 1fr); }
   /* 작은 화면에서는 돌을 살짝 크게, 탭 영역은 더 넉넉하게 */
-  .stone, .hover-ghost { width: 4.4%; }
-  .click-pt { width: 7.6%; }
+  .stone, .hover-ghost { width: 4.8%; }
+  .click-pt { width: 8.2%; }
 }
