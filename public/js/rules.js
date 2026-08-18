@@ -13,6 +13,7 @@
   const BLACK = 'black';
   const WHITE = 'white';
   const MAX_UNDOS = 3; // 한 판에서 각 플레이어가 쓸 수 있는 무르기 횟수
+  const TURN_TIME_MS = 3 * 60 * 1000; // 한 수를 두는 데 주어지는 제한 시간 (3분)
 
   const DIRS = [
     [1, 0],   // 가로
@@ -128,7 +129,7 @@
   }
 
   return {
-    SIZE, BLACK, WHITE, DIRS, MAX_UNDOS,
+    SIZE, BLACK, WHITE, DIRS, MAX_UNDOS, TURN_TIME_MS,
     createBoard, cloneBoard, inBounds, other,
     checkWin, isBoardFull, isValidMove, lineInfo, getCenter,
     countOpenThrees, isForbiddenMove,

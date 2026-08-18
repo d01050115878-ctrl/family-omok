@@ -209,6 +209,11 @@ button { cursor: pointer; border: none; }
 @keyframes blink { 0%, 80%, 100% { opacity: .2; } 40% { opacity: 1; } }
 .net-status { text-align: center; font-size: 13px; color: var(--bad); min-height: 18px; }
 
+.record-line {
+  text-align: center; font-size: 12px; font-weight: 700; color: var(--muted);
+  background: #faf3e4; border-radius: 10px; padding: 6px 8px; margin: 8px 0 0;
+}
+
 /* ---------- 배우기 ---------- */
 .learn-list { display: grid; gap: 8px; margin: 10px 0; }
 .learn-item {
@@ -325,6 +330,14 @@ button { cursor: pointer; border: none; }
   text-align: center; background: rgba(255, 253, 247, .92); border-radius: 10px;
   padding: 6px; margin-top: 6px; font-weight: 700; font-size: 13px; color: #5a3a1c;
 }
+
+.turn-timer {
+  text-align: center; background: rgba(255, 253, 247, .92); border-radius: 10px;
+  padding: 4px; margin-top: 4px; font-weight: 800; font-size: 13px; color: var(--good);
+  letter-spacing: .5px; transition: color .2s;
+}
+.turn-timer.low { color: var(--bad); animation: timerPulse 1s infinite; }
+@keyframes timerPulse { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
 
 .review-bar { background: rgba(255, 253, 247, .95); border-radius: 12px; padding: 10px; margin-top: 8px; }
 .rv-nav { display: flex; align-items: center; gap: 6px; justify-content: center; }

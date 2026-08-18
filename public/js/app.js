@@ -8,6 +8,7 @@
   const AI = window.OmokAI;
   const SIZE = R.SIZE;
   const MAX_UNDOS = R.MAX_UNDOS;
+  const TURN_TIME_MS = R.TURN_TIME_MS;
 
   const $ = (sel, el) => (el || document).querySelector(sel);
   const $$ = (sel, el) => Array.from((el || document).querySelectorAll(sel));
@@ -41,6 +42,7 @@
     aiThinking: false,
     hintMark: null,   // {x, y} — 다음 수를 둘 때까지 계속 표시
     undoCounts: { black: 0, white: 0 }, // 각 색이 사용한 무르기 횟수
+    turnDeadline: null, // 현재 차례가 끝나는 시각(ms epoch) — 넘기면 자동으로 상대 턴
   };
 
   /* ---------------- 유틸 ---------------- */
@@ -147,6 +149,7 @@
       $$('#levelGrid .level-btn').forEach((b) => b.classList.remove('selected'));
       btn.classList.add('selected');
       state.aiLevel = Number(btn.dataset.level);
+      updateAiRecordLine();
     });
   });
   $$('#sideGridAi .side-btn').forEach((btn) => {
@@ -298,7 +301,7 @@
             renderBoard();
             updateTurnUI();
             updateUndoUI();
-            if (res.status === 'ended') onGameEnd(true);
+            if (res.status === 'ended') { onGameEnd(true); } else { startTurnTimer(res.turnDeadline); }
           }
         });
       }
@@ -316,8 +319,9 @@
       state.turn = payload.turn;
       state.moves = [];
       state.mySide = meColor;
+      state.status = 'playing';
       state.undoCounts = payload.undoCounts || { black: 0, white: 0 };
-      startGame('online', true);
+      startGame('online', true, payload.turnDeadline);
       toast('상대방과 연결됐어요! 게임 시작 🎉');
     });
 
@@ -334,7 +338,20 @@
         onGameEnd();
       } else {
         updateTurnUI();
+        startTurnTimer(payload.turnDeadline);
       }
+    });
+
+    socket.on('game:turn-timeout', (payload) => {
+      if (state.mode !== 'online') return;
+      const skipped = state.turn;
+      toast(`⏱ 시간이 초과돼서 ${colorName(skipped)} 차례를 건너뛰었어요`);
+      state.turn = payload.turn;
+      state.hintMark = null;
+      renderBoard();
+      updateTurnUI();
+      updateUndoUI();
+      startTurnTimer(payload.turnDeadline);
     });
 
     socket.on('game:undo-requested', () => {
@@ -362,6 +379,7 @@
       rebuildMoveLog();
       updateTurnUI();
       updateUndoUI();
+      if (state.status === 'playing') startTurnTimer(payload.turnDeadline);
     });
 
     socket.on('game:move-rejected', () => {
@@ -392,6 +410,7 @@
       resetGameScreenUI();
       renderBoard();
       updateTurnUI();
+      startTurnTimer(payload.turnDeadline || (Date.now() + TURN_TIME_MS));
       toast('재대결이 시작됐어요!');
     });
 
@@ -415,7 +434,7 @@
   })();
 
   /* ---------------- 게임 시작/초기화 ---------------- */
-  function startGame(mode, skipReset) {
+  function startGame(mode, skipReset, turnDeadline) {
     state.mode = mode;
     state.hintMark = null;
     if (!skipReset) {
@@ -426,14 +445,17 @@
       state.winner = null;
       state.winLine = null;
       state.undoCounts = { black: 0, white: 0 };
-    } else {
-      state.status = 'playing';
     }
     state.flipped = mode === 'online' && state.mySide === R.WHITE;
     resetGameScreenUI();
     initBoardDOM();
     renderBoard();
     updateTurnUI();
+    if (state.status === 'playing') {
+      startTurnTimer(turnDeadline || (Date.now() + TURN_TIME_MS));
+    } else {
+      stopTurnTimer();
+    }
     showScreen('screen-game');
 
     const chatEnabled = mode === 'online';
@@ -471,6 +493,65 @@
     const remaining = color ? Math.max(0, MAX_UNDOS - state.undoCounts[color]) : MAX_UNDOS;
     btn.disabled = color != null && remaining <= 0;
     btn.title = color != null ? `무르기 (남은 횟수 ${remaining}/${MAX_UNDOS})` : '무르기';
+  }
+
+  /* ---------------- 수순 제한 시간 (1수당 3분) ---------------- */
+  // local/ai 모드는 상대가 서버에 없으므로 이 브라우저가 직접 시간 초과를 판정한다.
+  // online 모드는 서버가 판정해서 turnDeadline/game:turn-timeout으로 알려주므로,
+  // 여기서는 그 값을 그대로 화면에 표시만 한다 (로컬 타임아웃 예약은 하지 않음).
+  let turnTickHandle = null;
+  let localTurnTimeout = null;
+
+  function clearLocalTurnTimeout() {
+    if (localTurnTimeout) { clearTimeout(localTurnTimeout); localTurnTimeout = null; }
+  }
+
+  function startTurnTimer(deadline) {
+    state.turnDeadline = deadline;
+    clearLocalTurnTimeout();
+    clearInterval(turnTickHandle);
+    if (state.mode !== 'online' && state.status === 'playing') {
+      localTurnTimeout = setTimeout(handleLocalTurnTimeout, Math.max(0, deadline - Date.now()));
+    }
+    renderTurnTimer();
+    turnTickHandle = setInterval(renderTurnTimer, 250);
+  }
+
+  function stopTurnTimer() {
+    state.turnDeadline = null;
+    clearLocalTurnTimeout();
+    clearInterval(turnTickHandle);
+    turnTickHandle = null;
+    $('#turnTimer').classList.add('hidden');
+  }
+
+  function renderTurnTimer() {
+    const el = $('#turnTimer');
+    if (!state.turnDeadline || state.status !== 'playing' || state.reviewing) {
+      el.classList.add('hidden');
+      return;
+    }
+    const remainMs = Math.max(0, state.turnDeadline - Date.now());
+    const sec = Math.ceil(remainMs / 1000);
+    const mm = Math.floor(sec / 60);
+    const ss = sec % 60;
+    el.textContent = `⏱ ${mm}:${String(ss).padStart(2, '0')}`;
+    el.classList.remove('hidden');
+    el.classList.toggle('low', remainMs <= 20000);
+  }
+
+  // local/ai 모드에서 3분 안에 수를 두지 않으면 그 차례를 건너뛰고 상대 턴으로 넘긴다
+  function handleLocalTurnTimeout() {
+    if (state.status !== 'playing' || state.reviewing || state.aiThinking) return;
+    const skipped = state.turn;
+    toast(`⏱ 시간이 초과돼서 ${colorName(skipped)} 차례를 건너뛰었어요`);
+    state.turn = otherColor(state.turn);
+    state.hintMark = null;
+    renderBoard();
+    updateTurnUI();
+    updateUndoUI();
+    startTurnTimer(Date.now() + TURN_TIME_MS);
+    if (state.mode === 'ai' && state.turn !== state.mySide) scheduleAiMove();
   }
 
   function buildQuickMsgs() {
@@ -588,6 +669,7 @@
     appendMoveLog(state.moves.length - 1);
     updateTurnUI();
     updateUndoUI();
+    if (state.status === 'playing') startTurnTimer(Date.now() + TURN_TIME_MS);
   }
 
   function scheduleAiMove() {
@@ -687,10 +769,49 @@
     el._t = setTimeout(() => el.classList.add('hidden'), 1800);
   }
 
+  /* ---------------- 상대전적 ---------------- */
+  function loadStats() {
+    try {
+      const raw = localStorage.getItem('omok_stats');
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) { return {}; }
+  }
+  function getRecord(key) {
+    const stats = loadStats();
+    return stats[key] || { win: 0, lose: 0, draw: 0 };
+  }
+  function bumpRecord(key, result) {
+    const stats = loadStats();
+    const rec = stats[key] || { win: 0, lose: 0, draw: 0 };
+    rec[result] = (rec[result] || 0) + 1;
+    stats[key] = rec;
+    localStorage.setItem('omok_stats', JSON.stringify(stats));
+  }
+  function formatRecord(rec) { return `${rec.win}승 ${rec.lose}패 ${rec.draw}무`; }
+  function updateAiRecordLine() {
+    $('#aiRecordLine').textContent = `이 난이도 상대전적: ${formatRecord(getRecord('ai-lv' + state.aiLevel))}`;
+  }
+  function updateOnlineRecordLine() {
+    $('#onlineRecordLine').textContent = `온라인 전적: ${formatRecord(getRecord('online'))}`;
+  }
+  function recordGameStats() {
+    if (state.mode !== 'ai' && state.mode !== 'online') return;
+    const result = state.winner === 'draw' ? 'draw' : (state.winner === state.mySide ? 'win' : 'lose');
+    if (state.mode === 'ai') {
+      bumpRecord('ai-lv' + state.aiLevel, result);
+      updateAiRecordLine();
+    } else {
+      bumpRecord('online', result);
+      updateOnlineRecordLine();
+    }
+  }
+
   /* ---------------- 게임 종료 ---------------- */
   function onGameEnd(skipRender) {
+    stopTurnTimer();
     sndWin();
     if (!skipRender) renderBoard();
+    recordGameStats();
     showEndModal();
   }
 
@@ -763,6 +884,7 @@
     state.hintMark = null;
     $('#winBanner').classList.add('hidden');
     renderBoard(); rebuildMoveLog(); updateTurnUI(); updateUndoUI();
+    startTurnTimer(Date.now() + TURN_TIME_MS);
     toast('한 수 물렀어요');
   });
 
@@ -826,6 +948,7 @@
   });
 
   function goHome() {
+    stopTurnTimer();
     if (state.mode === 'online' && socket) {
       socket.emit('room:leave');
       localStorage.removeItem('omok_room');
@@ -922,7 +1045,12 @@
     state.reviewing = false;
     $('#reviewBar').classList.add('hidden');
     renderBoard();
-    if (state.status === 'ended') showEndModal();
+    if (state.status === 'ended') {
+      showEndModal();
+    } else if (state.mode !== 'online') {
+      // 복기하는 동안은 로컬 시간 초과 판정을 쉬어두므로, 나가면 다시 3분을 새로 준다
+      startTurnTimer(Date.now() + TURN_TIME_MS);
+    }
   });
   $('#rvFirst').addEventListener('click', () => { state.reviewIndex = 0; renderReview(); });
   $('#rvPrev').addEventListener('click', () => { state.reviewIndex = Math.max(0, state.reviewIndex - 1); renderReview(); });
@@ -1007,6 +1135,8 @@
     loadProfile();
     buildLearnList();
     initBoardDOM();
+    updateAiRecordLine();
+    updateOnlineRecordLine();
 
     // 게임 도중 새로고침 대비: 저장된 방 정보가 있으면 재접속 시도
     try {
@@ -1030,7 +1160,8 @@
           const oppP = res.players.find((p) => p.token !== res.token);
           state.players.black = res.color === R.BLACK ? profileOf(meP) : profileOf(oppP);
           state.players.white = res.color === R.WHITE ? profileOf(meP) : profileOf(oppP);
-          startGame('online', true);
+          startGame('online', true, res.turnDeadline);
+          if (res.status === 'ended') onGameEnd(true);
         });
       }
     } catch (e) { /* 무시 */ }

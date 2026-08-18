@@ -39,6 +39,29 @@
     return total;
   }
 
+  // count는 "이 자리에 상대가 두었다고 가정했을 때"의 결과 개수라서, 상대 돌이 1개뿐이어도
+  // (예: 서로 초반에 한 개씩만 둔 상태) 그 옆을 막으면 count=2로 계산되어 "열린 2를 막는다"는
+  // 이유만으로 꽤 큰 수비 점수를 받아버린다. 실제로 몇 개가 "이미 놓여 있는지"(count-1)를 기준으로
+  // 심각도를 매겨야, 상대가 아직 1개뿐인 초반에는 쫓아다니지 않고, 상대가 이미 2개 이상 이어서
+  // 진짜 열린 3/4로 이어질 수 있을 때만 진지하게 막는다.
+  function defenseSeverity(count) {
+    const existing = count - 1; // 이 자리를 제외하고 상대가 실제로 이미 이어놓은 돌 개수
+    if (existing >= 3) return 0.95; // 이미 4목 위협 — 반드시 막아야 함
+    if (existing === 2) return 0.55; // 이미 3목 위협 — 방치하면 열린 4로 이어질 수 있어 진지하게 대응
+    if (existing === 1) return 0.18; // 상대가 아직 1개뿐 — 크게 신경 쓰지 않고 내 공격을 우선한다
+    return 0.05; // 상대 돌이 아예 없는 방향 — 거의 무시
+  }
+
+  // (x,y)에 player가 두었다고 가정할 때의 수비력 점수 (상대 위협을 얼마나 막는지, 심각도 가중)
+  function pointDefenseScore(board, x, y, player, size) {
+    let total = 0;
+    for (const [dx, dy] of Rules.DIRS) {
+      const { count, openEnds } = Rules.lineInfo(board, x, y, dx, dy, player, size);
+      total += patternScore(count, openEnds) * defenseSeverity(count);
+    }
+    return total;
+  }
+
   // 후보 지점: 이미 놓인 돌 주변 2칸 이내 (돌이 하나도 없으면 중앙)
   function getCandidates(board, size) {
     size = size || board.length;
@@ -69,9 +92,8 @@
   function evaluatePoint(board, x, y, player, size) {
     const opp = Rules.other(player);
     const off = pointOffenseScore(board, x, y, player, size);
-    const def = pointOffenseScore(board, x, y, opp, size);
-    // 상대의 승리를 막는 것은 거의 동급으로 중요하게, 약간 낮은 가중치
-    return off + def * 0.92;
+    const def = pointDefenseScore(board, x, y, opp, size);
+    return off + def;
   }
 
   // player가 지금 당장(현재 보드 그대로) 둘 수 있는, 즉시 5목이 완성되는 자리들

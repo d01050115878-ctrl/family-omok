@@ -1,6 +1,7 @@
 /* =========================================================
    가족 오목 게임 - 서버 (Express + Socket.IO)
    ========================================================= */
+const fs = require('fs');
 const path = require('path');
 const http = require('http');
 const crypto = require('crypto');
@@ -17,8 +18,21 @@ const io = new Server(server, {
 const PORT = process.env.PORT || 3000;
 const BOARD_SIZE = Rules.SIZE;
 const MAX_UNDOS = Rules.MAX_UNDOS;
+const TURN_TIME_MS = Rules.TURN_TIME_MS;
 
-app.use(express.static(path.join(__dirname, 'public')));
+// 서버가 새로 뜰 때마다(=새 배포마다) 값이 바뀌는 버전 태그.
+// index.html이 참조하는 js/css 경로 뒤에 ?v=<태그>를 붙여서, 배포 후에도 브라우저가
+// 예전에 캐시해둔 스크립트를 계속 쓰는 바람에 "업데이트가 반영이 안 되는" 문제를 막는다.
+const ASSET_VERSION = String(Date.now());
+const INDEX_HTML = fs
+  .readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8')
+  .replace(/(src|href)="((?:css|js)\/[^"]+)"/g, (m, attr, url) => `${attr}="${url}?v=${ASSET_VERSION}"`);
+
+app.use(express.static(path.join(__dirname, 'public'), { index: false }));
+app.get(['/', '/index.html'], (req, res) => {
+  res.set('Cache-Control', 'no-cache');
+  res.type('html').send(INDEX_HTML);
+});
 app.get('/healthz', (req, res) => res.send('ok'));
 
 /** @type {Map<string, Room>} */
@@ -55,7 +69,36 @@ function makeRoom(code) {
     createdAt: Date.now(),
     lastActivity: Date.now(),
     disconnectTimers: {},
+    turnTimer: null,
+    turnDeadline: null,
   };
+}
+
+function clearTurnTimer(room) {
+  if (room.turnTimer) {
+    clearTimeout(room.turnTimer);
+    room.turnTimer = null;
+  }
+}
+
+// 현재 차례(room.turn)를 기준으로 제한 시간을 새로 건다. 시간이 다 되면
+// 돌을 놓지 않은 채로 상대 턴으로 넘기고, 다음 차례의 타이머를 다시 건다.
+function scheduleTurnTimer(room) {
+  clearTurnTimer(room);
+  if (room.status !== 'playing') {
+    room.turnDeadline = null;
+    return;
+  }
+  room.turnDeadline = Date.now() + TURN_TIME_MS;
+  const turnAtSchedule = room.turn;
+  room.turnTimer = setTimeout(() => {
+    if (room.status !== 'playing' || room.turn !== turnAtSchedule) return;
+    room.turn = Rules.other(room.turn);
+    room.undoRequest = null;
+    touch(room);
+    scheduleTurnTimer(room);
+    io.to(room.code).emit('game:turn-timeout', { turn: room.turn, turnDeadline: room.turnDeadline });
+  }, TURN_TIME_MS);
 }
 
 function roomPublicPlayers(room) {
@@ -135,9 +178,10 @@ io.on('connection', (socket) => {
     cb && cb({ ok: true, code, token, color, size: BOARD_SIZE, players: roomPublicPlayers(room) });
 
     room.status = 'playing';
+    scheduleTurnTimer(room);
     io.to(code).emit('game:start', {
       board: room.board, turn: room.turn, size: BOARD_SIZE,
-      players: roomPublicPlayers(room), undoCounts: room.undoCounts,
+      players: roomPublicPlayers(room), undoCounts: room.undoCounts, turnDeadline: room.turnDeadline,
     });
   });
 
@@ -162,7 +206,7 @@ io.on('connection', (socket) => {
       ok: true, code, token: p.token, color: p.color, size: BOARD_SIZE,
       board: room.board, turn: room.turn, status: room.status,
       winner: room.winner, winLine: room.winLine,
-      players: roomPublicPlayers(room), undoCounts: room.undoCounts,
+      players: roomPublicPlayers(room), undoCounts: room.undoCounts, turnDeadline: room.turnDeadline,
     });
     socket.to(code).emit('room:opponent-reconnected', { players: roomPublicPlayers(room) });
   });
@@ -198,10 +242,11 @@ io.on('connection', (socket) => {
       room.turn = Rules.other(room.turn);
     }
     room.undoRequest = null;
+    scheduleTurnTimer(room);
 
     io.to(room.code).emit('game:move', {
       x, y, color: me.color, turn: room.turn,
-      winner, winLine, status: room.status,
+      winner, winLine, status: room.status, turnDeadline: room.turnDeadline,
     });
   });
 
@@ -235,11 +280,12 @@ io.on('connection', (socket) => {
         room.winLine = null;
       }
       if (requester) room.undoCounts[requester.color] = (room.undoCounts[requester.color] || 0) + 1;
+      scheduleTurnTimer(room);
     }
     room.undoRequest = null;
     io.to(room.code).emit('game:undo-result', {
       accepted: accept, board: room.board, turn: room.turn, status: room.status,
-      undoCounts: room.undoCounts,
+      undoCounts: room.undoCounts, turnDeadline: room.turnDeadline,
     });
   });
 
@@ -250,6 +296,8 @@ io.on('connection', (socket) => {
     if (!me) return;
     room.status = 'ended';
     room.winner = Rules.other(me.color);
+    clearTurnTimer(room);
+    room.turnDeadline = null;
     io.to(room.code).emit('game:resigned', { by: me.color, winner: room.winner });
   });
 
@@ -271,8 +319,10 @@ io.on('connection', (socket) => {
       Object.values(room.players).forEach((p) => {
         p.color = p.color === Rules.BLACK ? Rules.WHITE : Rules.BLACK;
       });
+      scheduleTurnTimer(room);
       io.to(room.code).emit('game:rematch-start', {
         board: room.board, turn: room.turn, players: roomPublicPlayers(room), undoCounts: room.undoCounts,
+        turnDeadline: room.turnDeadline,
       });
     }
   });
@@ -314,7 +364,10 @@ io.on('connection', (socket) => {
 
     const finalize = () => {
       const stillConnected = Object.values(room.players).some((p) => p.connected);
-      if (!stillConnected) rooms.delete(code);
+      if (!stillConnected) {
+        clearTurnTimer(room);
+        rooms.delete(code);
+      }
     };
 
     if (explicit) {
@@ -335,7 +388,10 @@ io.on('connection', (socket) => {
 setInterval(() => {
   const now = Date.now();
   for (const [code, room] of rooms) {
-    if (now - room.lastActivity > ROOM_TTL_MS) rooms.delete(code);
+    if (now - room.lastActivity > ROOM_TTL_MS) {
+      clearTurnTimer(room);
+      rooms.delete(code);
+    }
   }
 }, 60 * 1000);
 
